@@ -23,9 +23,46 @@ define([
             name: 'Symbol Table Integration'
         };
 
-        var createWriter = function (writeable) {
+        suite['Open writer with imports.'] = function() {
+            let testTable = new ion.SharedSymbolTable('test', 1, ['hello', 'world']);
+            let catalog = new ion.Catalog();
+            catalog.addSymbolTable(testTable);
+            let reader = new ion.makeReader("{ $10 : $11 }", {catalog, text});
+            let writer = new ion.makeTextWriter();
+        }
 
-        };
+        suite['Append LocalSymbolTable context on flush/close.'] = function() {
+
+        }
+
+        suite['Shared symbol table can belong to multiple catalogs.'] = function() {
+
+        }
+
+        suite['Ambiguous imports fail on read.'] = function() {
+
+        }
+
+        suite['Text writing known symbol from SID resolves text.'] = function() {
+
+        }
+
+        suite['Text writing symbol with unknown text as sid from import writes identifier and forces symbol table.'] = function() {
+
+        }
+
+        suite['Throw error if user attempts to manually write a symbol table.'] = function() {
+
+        }
+
+        suite['Writer constructed with import list includes those imports with every new LST context.'] = function() {
+
+        }
+
+        suite[''] = function() {
+
+        }
+
         registerSuite(suite);
     }
 );
