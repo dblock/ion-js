@@ -59,11 +59,9 @@ is unsupported at this time.
 | Github Issues |
 |:-------------|
 | [SymbolTokens](https://github.com/amzn/ion-js/issues/121) |
-| [IVM](https://github.com/amzn/ion-js/issues/122) |
 | [Numbers](https://github.com/amzn/ion-js/issues/123) |
 | [Utf8/32/64](https://github.com/amzn/ion-js/issues/124) |
 | [Blobs](https://github.com/amzn/ion-js/issues/125) |
-| [Triplequotes](https://github.com/amzn/ion-js/issues/126) |
 | [Binary](https://github.com/amzn/ion-js/issues/131) |
 
 # Use

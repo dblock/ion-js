@@ -59,6 +59,37 @@ define([
 
         }
 
+        suite['Flushing, finishing, or closing a writer below top level fails.'] = function() {
+
+        }
+
+        suite['Loading a symbol table without correct ordering of annotations fails.'] = function() {
+
+        }
+
+        suite['Out of range fieldname SID fails.'] = function() {
+
+        }
+
+        suite['Writer accepts imports after construction.'] = function() {
+
+        }
+        suite['Adding import below top level fails.'] = function() {
+
+        }
+
+        suite['Add imports skips duplicate imports.'] = function() {
+
+        }
+
+        suite['Add imported tables forces finish when  necessary.'] = function() {
+
+        }
+
+        suite['Addi import tables fails '] = function() {
+
+        }
+
         suite[''] = function() {
 
         }

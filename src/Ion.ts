@@ -34,7 +34,7 @@ const e = {
 
 /**
  * Options object to be passed during the creation of an Ion Reader.
- * Holds the Ion catalogue @see http://amzn.github.io/ion-docs/symbols.html#the-catalog
+ * Holds the Ion catalog @see http://amzn.github.io/ion-docs/symbols.html#the-catalog
  * and the Ion source type (i.e., binary or text) as a `string`
  */
 export interface Options {

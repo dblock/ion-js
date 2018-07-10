@@ -52,9 +52,9 @@ function load_imports(reader: Reader, catalog: Catalog) : Import {
       }
     }
 
-    if (version < 1) {
+    if (version === undefined) {
       version = 1;
-    }
+    } else if(version < 1) throw new Error("Version numbers cannot be less than 1.");
 
     if (name && name !== "$ion") {
       let symbolTable: SharedSymbolTable = catalog.findSpecificVersion(name, version);
