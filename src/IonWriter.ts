@@ -11,7 +11,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-import { Decimal } from "./IonDecimal";
+import { BigNumber } from "bignumber.js";
 import { Timestamp } from "./IonTimestamp";
 import { TypeCodes } from "./IonBinary";
 
@@ -22,7 +22,7 @@ export interface Writer {
   writeBlob(value: Uint8Array, annotations?: string[]) : void;
   writeBoolean(value: boolean, annotations?: string[]) : void;
   writeClob(value: Uint8Array, annotations?: string[]) : void;
-  writeDecimal(value: Decimal, annotations?: string[]) : void;
+  writeDecimal(value: BigNumber, annotations?: string[]) : void;
   writeFieldName(fieldName: string) : void;
   writeFloat32(value: number, annotations?: string[]) : void;
   writeFloat64(value: number, annotations?: string[]) : void;

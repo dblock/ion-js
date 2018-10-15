@@ -74,6 +74,7 @@ function isBinary(buf: Uint8Array) {
         } else {
             return new TextReader(new StringSpan(decodeUtf8(buf)), catalog);
         }
+
     }
 
 /**

@@ -40,13 +40,14 @@
 
 import { is_digit } from "./IonText";
 import { LongInt } from "./IonLongInt";
-
+import { BigNumber } from "bignumber.js";
 
 export class Decimal {
   public static readonly NULL: Decimal = new Decimal(undefined, undefined);
   public static readonly ZERO: Decimal = new Decimal(LongInt.ZERO, 0);
+  private decimal : BigNumber;
 
-  constructor(private _value: LongInt, private _exponent: number) {}
+  constructor(private _value: LongInt, private _exponent: number, private _BigNumber? : BigNumber) {}
 
   isZero() : boolean {
     if (this.isNull()) return false;

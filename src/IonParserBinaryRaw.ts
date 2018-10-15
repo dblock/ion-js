@@ -485,7 +485,7 @@ export class ParserBinaryRaw {
                 this._curr = this.read_timestamp_value();
                 break;
             case IonBinary.TB_SYMBOL:
-
+                this._curr = this.read_unsigned_int();
                 break;
             case IonBinary.TB_STRING:
                 this._curr = this.read_string_value();

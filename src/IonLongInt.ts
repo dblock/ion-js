@@ -30,6 +30,7 @@
 //      ION.LongInt.ZERO
 
 import { is_digit } from "./IonText";
+import { BigNumber } from "bignumber.js";
 
 export class LongInt {
   private static readonly zero_bytes: Uint8Array = new Uint8Array(1);
@@ -49,6 +50,7 @@ export class LongInt {
   private s : number;
   private d : string;
   private b : Uint8Array;
+  private bigNum : BigNumber;
 
   constructor(str: string, bytes: Uint8Array, signum: number) {
     this.s = signum;

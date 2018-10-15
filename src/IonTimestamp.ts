@@ -29,10 +29,9 @@
 //    The parse function returns a newly minted timestamp. If the string is
 //    undefined, empty or a null image it returns the timestamp NULL.
 
-import {Decimal} from "./IonDecimal";
-import {LongInt} from "./IonLongInt";
 import {Precision} from "./IonPrecision";
-import {isDigit} from "./IonText"
+import {isDigit} from "./IonText";
+import { BigNumber } from "bignumber.js";
 
 const MIN_SECONDS: number = 0;
 const MAX_SECONDS: number = 60;
@@ -57,18 +56,17 @@ const DAYS_PER_MONTH: number[] = [
 ]
 
 enum States {
-  YEAR,
-  MONTH,
-  DAY,
-  HOUR,
-  MINUTE,
-  SECONDS,
-  FRACTIONAL_SECONDS,
-  OFFSET,
-  OFFSET_POSITIVE,
-  OFFSET_NEGATIVE,
-  OFFSET_MINUTES,
-  OFFSET_ZULU
+  YEAR = 0,
+  MONTH = 1,
+  DAY = 2,
+  HOUR = 3,
+  MINUTE = 4,
+  SECONDS = 5,
+  OFFSET = 6,
+  OFFSET_POSITIVE = 7,
+  OFFSET_NEGATIVE = 8,
+  OFFSET_MINUTES = 9,
+  OFFSET_ZULU = 10
 }
 
 interface TransitionMap {
@@ -121,11 +119,6 @@ timeParserStates[States.MINUTE] = new TimeParserState(States.MINUTE, Precision.H
   "-": States.OFFSET_NEGATIVE,
   "Z": States.OFFSET_ZULU});
 timeParserStates[States.SECONDS] = new TimeParserState(States.SECONDS, Precision.SECONDS, 2, {
-  ".": States.FRACTIONAL_SECONDS,
-  "+": States.OFFSET_POSITIVE,
-  "-": States.OFFSET_NEGATIVE,
-  "Z": States.OFFSET_ZULU});
-timeParserStates[States.FRACTIONAL_SECONDS] = new TimeParserState(States.FRACTIONAL_SECONDS, Precision.SECONDS, undefined, {
   "+": States.OFFSET_POSITIVE,
   "-": States.OFFSET_NEGATIVE,
   "Z": States.OFFSET_ZULU});
@@ -173,13 +166,15 @@ function to_4_digits(v: number) : string {
 }
 
 function read_unknown_digits(str: string, pos: number) : string {//TODO this seems incorrect
-  let i: number = pos;
-  for (; i < str.length; i++) {
-    if (!isDigit(str.charCodeAt(i))) {
-      break;
+    let i: number = pos;
+    let charCode;
+    for (; i < str.length; i++) {
+        charCode = str.charCodeAt(i)
+        if (!isDigit(charCode) || (i - pos === 2 && charCode !== 46)) {
+            break;
+        }
     }
-  }
-  return str.substring(pos, i);
+    return str.substring(pos, i);
 }
 
 function read_digits(str: string, pos: number, len: number) : number {
@@ -241,7 +236,7 @@ export class Timestamp {
     readonly day : number;
     readonly hour : number;
     readonly minute : number;
-    readonly seconds : Decimal;
+    readonly seconds : BigNumber;
     readonly date : Date;
     /*
     readonly utcYear : number;
@@ -255,13 +250,12 @@ export class Timestamp {
     constructor(precision, offset, year, month, day, hour, minute, seconds) {
         if(precision === Precision.SECONDS){
             if(seconds === undefined || seconds === null) throw new Error("Seconds and precision in illegal state.");
-            if (typeof seconds === 'number') {
-                if(Math.floor(seconds) !== seconds) throw new Error("Fractional timestamp seconds must be supplied in Decimal format.");
-                this.seconds = new Decimal(LongInt.fromNumber(seconds), 0);
-            } else if (typeof seconds === 'string') {
-                this.seconds = Decimal.parse(seconds);
-            } else {
+            if (typeof seconds === 'number' || typeof seconds === 'string') {
+                this.seconds = new BigNumber(seconds);
+            } else if(seconds instanceof BigNumber){
                 this.seconds = seconds;
+            } else {
+                throw new Error("Seconds must be of type number, string, or BigNumber");
             }
         }
         this.precision = precision;
@@ -323,7 +317,7 @@ export class Timestamp {
       default:
         throw new Error(`Unknown precision ${this.precision}`);
       case Precision.SECONDS:
-        let seconds: number = this.seconds.numberValue();
+        let seconds: number = this.seconds.toNumber();
         if (seconds < MIN_SECONDS || seconds >= MAX_SECONDS) {
           throw new Error(`Seconds ${seconds} must be between ${MIN_SECONDS} inclusive and ${MAX_SECONDS} exclusive`);
         }
@@ -372,7 +366,7 @@ export class Timestamp {
           case Precision.NULL:
               return expected.precision === Precision.NULL;
           case Precision.SECONDS:
-              if(!this.seconds.equals(expected.seconds)) return false;
+              if(this.seconds.comparedTo(expected.seconds) !== 0) return false;
           case Precision.HOUR_AND_MINUTE:
               if(this.minute !== expected.minute || this.hour !== expected.hour) return false;
           case Precision.DAY:
@@ -453,7 +447,7 @@ export class Timestamp {
     public getDate() : Date {
         let offsetShift = this.offset*60000, seconds = null, ms = null;
         if(this.precision === Precision.SECONDS) {
-            let fraction = this.seconds.numberValue();
+            let fraction = this.seconds.toNumber();
             seconds = Math.floor(fraction);
             ms = fraction - seconds;
         }
@@ -487,65 +481,52 @@ export class Timestamp {
         let day: number = null;
         let hour: number = null;
         let minute: number = null;
-        let seconds: number | Decimal = null;
+        let seconds: BigNumber;
 
         let pos: number = 0;
         let state: TimeParserState = timeParserStates[States.YEAR];
         let limit: number = str.length;
-
-        let v: number;
-
         while (pos < limit) {
-            if (state.len === undefined) {
-                let digits: string = read_unknown_digits(str, pos);
-                if (digits.length === 0) throw new Error("No digits found at pos: " + pos);
-                v = parseInt(digits, 10);
-                pos += digits.length;
-            } else if (state.len > 0) {
-                v = read_digits(str, pos, state.len);
-                if (v < 0) throw new Error("Non digit value found at pos " + pos);
-                pos = pos + state.len;
-            }
             switch (state.f) {
                 case States.YEAR:
-                    year = v;
+                    year = Number(str.substr( pos, state.len));
                     break;
                 case States.MONTH:
-                    month = v;
+                    month = Number(str.substr( pos, state.len));
                     break;
                 case States.DAY:
-                    day = v;
+                    day = Number(str.substr( pos, state.len));
                     break;
                 case States.HOUR:
-                    hour = v;
+                    hour = Number(str.substr( pos, state.len));
                     break;
                 case States.MINUTE:
-                    minute = v;
+                    minute = Number(str.substr( pos, state.len));
                     break;
                 case States.SECONDS:
-                    seconds = v;
-                    break;
-                case States.FRACTIONAL_SECONDS:
-                    const START_POSITION_OF_SECONDS = 17;
-                    seconds = Decimal.parse(str.substring(START_POSITION_OF_SECONDS, pos), false);
+                    let digits: string = read_unknown_digits(str, pos);
+                    if (digits.length === 0) throw new Error("No digits found at pos: " + pos);
+                    pos += digits.length;
+                    seconds = new BigNumber(digits);
                     break;
                 case States.OFFSET:
                     break;
                 case States.OFFSET_POSITIVE:
-                    offset = v * 60;
+                    offset = Number(str.substr( pos, state.len)) * 60;
                     break;
                 case States.OFFSET_NEGATIVE:
-                    offset = -v * 60;
+                    offset = Number(str.substr( pos, state.len)) * -60;
                     break;
                 case States.OFFSET_MINUTES:
-                    offset += (offset < -0) ? -v : v;
-                    if(v >= 60) throw new Error("Minute offset " + String(v) + " above maximum or equal to : 60");
+                    let min = Number(str.substr( pos, state.len));
+                    offset += (offset < -0) ? -min : min;
+                    if(min >= 60) throw new Error("Minute offset " + min + " above maximum or equal to : 60");
                     break;
                 case States.OFFSET_ZULU:
                     offset = -0.0;
                     break;
                 default:
-                    throw new Error("invalid internal state");
+                    throw new Error("Invalid internal state");
             }
             if (state.p !== undefined) {
                 precision = state.p;

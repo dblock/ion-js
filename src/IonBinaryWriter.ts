@@ -11,17 +11,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-import { Decimal } from "./IonDecimal";
 import { encodeUtf8 } from "./IonUnicode";
 import { Import } from "./IonImport";
 import { LocalSymbolTable } from "./IonLocalSymbolTable";
-import { LongInt } from "./IonLongInt";
 import { LowLevelBinaryWriter } from "./IonLowLevelBinaryWriter";
 import { Precision } from "./IonPrecision";
 import { Timestamp } from "./IonTimestamp";
 import { TypeCodes } from "./IonBinary";
 import { Writeable } from "./IonWriteable";
 import { Writer } from "./IonWriter";
+import {BigNumber} from "bignumber.js";
 
 const MAJOR_VERSION: number = 1;
 const MINOR_VERSION: number = 0;
@@ -99,41 +98,39 @@ export class BinaryWriter implements Writer {
     this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.CLOB, this.encodeAnnotations(annotations), value));
   }
 
-  writeDecimal(value: Decimal | string, annotations?: string[]) : void {
-    this.checkWriteValue();
-    if (value === null || value === undefined) {
-      this.writeNull(TypeCodes.DECIMAL, annotations);
-      return;
-    }
-
-    if (typeof value == 'string') value = Decimal.parse(value);
-
-    let isPositiveZero: boolean = value.isZero() && !value.isNegative();
-    if (isPositiveZero) {
-      // Special case per the spec: http://amzn.github.io/ion-docs/binary.html#decimal
-      this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.DECIMAL, this.encodeAnnotations(annotations), new Uint8Array(0)));
-      return;
-    }
-
-    let exponent: number = value.getExponent();
-    let digits: Uint8Array = value.getDigits().byteValue();
-    if (value.isNegative()) {
-      if (digits.length > 0) {
-        if (digits[0] & 0x80) {
-          digits.subarray(1, digits.length);
+    writeDecimal(value: BigNumber, annotations?: string[]) : void {
+        this.checkWriteValue();
+        if (value === null) {
+            this.writeNull(TypeCodes.DECIMAL, annotations);
+            return;
         } else {
-          digits[0] |= 0x80;
-        }
-      } else {
-        digits = new Uint8Array([0x80]); // Sign bit set, zero value
-      }
-    }
+            let isPositiveZero: boolean = value.isZero() && !value.isNegative();
+            if (isPositiveZero) {
+                // Special case per the spec: http://amzn.github.io/ion-docs/binary.html#decimal
+                this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.DECIMAL, this.encodeAnnotations(annotations), new Uint8Array(0)));
+                return;
+            }
+            let exponent: number = value.e;
+            //todo write number[] 1e14 numbers
+            let digits: Uint8Array = value.getDigits().byteValue();
+            if (value.isNegative()) {
+                if (digits.length > 0) {
+                    if (digits[0] & 0x80) {
+                        digits.subarray(1, digits.length);
+                    } else {
+                        digits[0] |= 0x80;
+                    }
+                } else {
+                    digits = new Uint8Array([0x80]); // Sign bit set, zero value
+                }
+            }
 
-    let writer: LowLevelBinaryWriter = new LowLevelBinaryWriter(new Writeable(LowLevelBinaryWriter.getVariableLengthSignedIntSize(exponent) + digits.length));
-    writer.writeVariableLengthSignedInt(exponent);
-    writer.writeBytes(new Uint8Array(digits));
-    this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.DECIMAL, this.encodeAnnotations(annotations), writer.getBytes()));
-  }
+            let writer: LowLevelBinaryWriter = new LowLevelBinaryWriter(new Writeable(LowLevelBinaryWriter.getVariableLengthSignedIntSize(exponent) + digits.length));
+            writer.writeVariableLengthSignedInt(exponent);
+            writer.writeBytes(new Uint8Array(digits));
+            this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.DECIMAL, this.encodeAnnotations(annotations), writer.getBytes()));
+        }
+    }
 
   writeFloat32(value: number, annotations?: string[]) : void {
     this.checkWriteValue();

@@ -72,26 +72,30 @@ module.exports = function(grunt) {
           target: "es6",
           module: "amd",
           declaration: true,
-          sourceMap: true  // generate .map files for debugging
+          sourceMap: true,  // generate .map files for debugging
+          //allowJs: true
         }
       },
  
       'amd-es6': {
-        src: ['src/**/*.ts'],
+        src: ['src/**/*.ts',],
         outDir: 'dist/amd/es6',
         options: {
           target: "es6",
           module: "amd",
+          moduleResolution : 'node',
           declaration: true,
+          //allowJs: true
         }
       },
       'commonjs-es6': {
-        src: ['src/**/*.ts'],
+        src: ['src/**/*.ts',],
         outDir: 'dist/commonjs/es6',
         options: {
           target: "es6",
           module: "commonjs",
-          declaration: true
+          declaration: true,
+          //allowJs : true
         }
       }
     },
@@ -128,7 +132,7 @@ module.exports = function(grunt) {
         files: [{ 
           'expand': true, 
           cwd: 'dist/amd/es6',
-          'src': ['*.js'], 
+          'src': ['*.js'],
           'dest': 'dist/amd/es5/', 
           'ext': '.js',
         }], 
@@ -147,6 +151,7 @@ module.exports = function(grunt) {
          browserifyOptions: { 
            standalone: 'ion', // add `ion` to global JS variable `window` in browsers
            debug: true,
+           require: "bignumber.js"
          },
         transform: [["babelify", 
                      { 
@@ -154,6 +159,7 @@ module.exports = function(grunt) {
                        "plugins" : [["transform-runtime", {"polyfill" : true}],
                                     ["transform-object-assign"]]
                      }]],
+            //require: ['bignumber.js'],
         }
       },
       prod: {
@@ -163,6 +169,7 @@ module.exports = function(grunt) {
          browserifyOptions: { 
            standalone: 'ion', // add `ion` to global JS variable `window` in browsers
            debug: false,
+           require: "bignumber.js"
          },
         transform: [["babelify", 
                      { 
