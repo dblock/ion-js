@@ -357,14 +357,15 @@ class IonBlobEvent extends AbstractIonEvent {
         super(eventType , ionType, fieldName, annotations, depth, ionValue);
     }
     valueEquals(expected : IonBlobEvent) : boolean {
-        return this.ionValue === expected.ionValue;
-    }
-    writeIonValue(writer : Writer) : void {//TODO needs to be backed by number[] https://github.com/amzn/ion-js/issues/127
-        let tempBuf = [];
-        for (let i = 0; i < this.ionValue.length; i++) {
-            tempBuf.push(this.ionValue.charCodeAt(i));
+        if(!(expected instanceof IonBlobEvent)) return false;
+        if(this.ionValue.length !== expected.ionValue.length) return false;
+        for(let i = 0; i < this.ionValue.length; i++){
+            if(this.ionValue[i] !== expected.ionValue[i]) return false;
         }
-        writer.writeBlob(tempBuf);
+        return true;
+    }
+    writeIonValue(writer : Writer) : void {
+        writer.writeBlob(this.ionValue);
     }
 }
 

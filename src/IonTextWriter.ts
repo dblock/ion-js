@@ -62,7 +62,7 @@ export class TextWriter implements Writer {
     writeBlob(value: number[], annotations?: string[]) : void {
         this.writeValue(TypeCodes.BLOB, value, annotations, (value: number[]) => {
             this.writeUtf8('{{');
-            this.writeable.writeBytes(encodeUtf8(toBase64(value)));
+            this.writeable.writeBytes(encodeUtf8(toBase64(new Uint8Array(value))));
             this.writeUtf8('}}');
         });
     }
