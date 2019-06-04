@@ -293,7 +293,7 @@ export class TextReader implements Reader {
                 return this.stringValue();
             }
             case IonTypes.BLOB : {
-                return this.stringValue();
+                return this.byteValue();
             }
             default : {
                 return undefined;
