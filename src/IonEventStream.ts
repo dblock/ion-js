@@ -71,26 +71,19 @@ export class IonEventStream {
                             writer.writeDecimal(tempEvent.ionValue, tempEvent.annotations);
                             break;
                         case IonTypes.FLOAT :
-                            writer.writeFloat32(tempEvent.ionValue, tempEvent.annotations);
+                            writer.writeFloat64(tempEvent.ionValue, tempEvent.annotations);
                             break;
                         case IonTypes.NULL :
                             writer.writeNull(tempEvent.ionType.bid, tempEvent.annotations);
                             break;
                         case IonTypes.TIMESTAMP :
+                            writer.writeTimestamp(tempEvent.ionValue, tempEvent.annotations);
                             break;
                         case IonTypes.CLOB :
-                            tempBuf = [];
-                            for(let i = 0; i < tempEvent.ionValue.length; i++){
-                                tempBuf.push(tempEvent.ionValue.charCodeAt(i))
-                            }
-                            writer.writeClob(tempBuf, tempEvent.annotations);
+                            writer.writeClob(tempEvent.ionValue, tempEvent.annotations);
                             break;
                         case IonTypes.BLOB :
-                            tempBuf = [];
-                            for(let i = 0; i < tempEvent.ionValue.length; i++){
-                                tempBuf.push(tempEvent.ionValue.charCodeAt(i))
-                            }
-                            writer.writeBlob(tempBuf, tempEvent.annotations);
+                            writer.writeBlob(tempEvent.ionValue, tempEvent.annotations);
                             break;
                         default :
                             throw new Error("unexpected type: " + tempEvent.ionType.name);

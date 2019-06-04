@@ -941,34 +941,27 @@ export class ParserTextRaw {
     this._ops.unshift( this._read_close_double_brace );
   }
 
-  private _read_blob() : void {
-    var ch, base64_chars = 0, trailers = 0;
-    for (;;) {
-      ch = this._read()
-      if (IonText.is_base64_char(ch)) {
-        base64_chars++;
-      }
-      else if (!IonText.is_whitespace(ch)) {
-        break;
-      }
-    }
-    while (ch == CH_EQ) {
-      trailers++
-      ch = this._read_after_whitespace(false);
-    }
-    if (ch != CH_CC || this._read() != CH_CC) {
-      this._error("invalid blob");
-    }
-    else {
-      if (!is_valid_base64_length(base64_chars, trailers)) {
-        this._error( "invalid base64 value" );
-      }
-      else {
-        this._end = this._in.position() - 1;
+    private _read_blob() : void {
+        let ch, base64_chars = 0, trailers = 0;
+        this._start = this._in.position();
+        while(true) {
+            ch = this._read();
+            if (IonText.is_base64_char(ch)) {
+                base64_chars++;
+                this._end = this._in.position();
+            } else if(!IonText.is_whitespace(ch)) {
+                break;
+            }
+        }
+        while (ch == CH_EQ) {
+            trailers++;
+            ch = this._read_after_whitespace(false);
+        }
+        if (ch != CH_CC || this._read() != CH_CC) throw new Error("Invalid blob");
+        if (!is_valid_base64_length(base64_chars, trailers)) throw new Error( "Invalid base64 value" );
+
         this._value_push( T_BLOB );
-      }
     }
-  }
 
   private _read_comma() : void {
     var ch = this._read_after_whitespace(true);
