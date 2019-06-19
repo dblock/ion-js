@@ -241,7 +241,8 @@ export class Timestamp {
     readonly day : number;
     readonly hour : number;
     readonly minute : number;
-    readonly seconds : Decimal;
+    readonly seconds : number;
+    readonly fractionalSeconds : Decimal;
     readonly date : Date;
     /*
     readonly utcYear : number;
@@ -252,18 +253,7 @@ export class Timestamp {
     */
 
 
-    constructor(precision, offset, year, month, day, hour, minute, seconds) {
-        if(precision === Precision.SECONDS){
-            if(seconds === undefined || seconds === null) throw new Error("Seconds and precision in illegal state.");
-            if (typeof seconds === 'number') {
-                if(Math.floor(seconds) !== seconds) throw new Error("Fractional timestamp seconds must be supplied in Decimal format.");
-                this.seconds = new Decimal(new LongInt(seconds), 0);
-            } else if (typeof seconds === 'string') {
-                this.seconds = Decimal.parse(seconds);
-            } else {
-                this.seconds = seconds;
-            }
-        }
+    constructor(precision : number, offset : number, year : number, month : number, day : number, hour : number, minute : number, seconds : number, fractionalSeconds : Decimal) {
         this.precision = precision;
         this.offset = offset;
         this.year = year;
@@ -271,6 +261,8 @@ export class Timestamp {
         this.day = day;
         this.hour = hour;
         this.minute = minute;
+        this.seconds = seconds;
+        this.fractionalSeconds = fractionalSeconds;
         this.checkValid();
         this.date = new Date(Date.UTC(this.year, (this.precision === Precision.YEAR ? 0 : this.month - 1), this.day, this.hour, this.minute, null, null) - (this.offset * 60000));
         /*
@@ -323,10 +315,12 @@ export class Timestamp {
       default:
         throw new Error(`Unknown precision ${this.precision}`);
       case Precision.SECONDS:
-        let seconds: number = this.seconds.numberValue();
-        if (seconds < MIN_SECONDS || seconds >= MAX_SECONDS) {
-          throw new Error(`Seconds ${seconds} must be between ${MIN_SECONDS} inclusive and ${MAX_SECONDS} exclusive`);
-        }
+          if (this.seconds < MIN_SECONDS || this.seconds >= MAX_SECONDS) {
+              throw new Error(`Seconds ${this.seconds} must be between ${MIN_SECONDS} inclusive and ${MAX_SECONDS} exclusive`);
+          }
+          if(this.fractionalSeconds !== null && !this.fractionalSeconds.isPositiveFraction()) {
+              throw new Error(`fractional second ${this.fractionalSeconds.stringValue()} must be greater than 0 and less than 1`);
+          }
       case Precision.HOUR_AND_MINUTE:
         if (this.minute < MIN_MINUTE || this.minute > MAX_MINUTE) {
           throw new Error(`Minute ${this.minute} must be between ${MIN_MINUTE} and ${MAX_MINUTE} inclusive`);
@@ -372,7 +366,7 @@ export class Timestamp {
           case Precision.NULL:
               return expected.precision === Precision.NULL;
           case Precision.SECONDS:
-              if(!this.seconds.equals(expected.seconds)) return false;
+              if(this.seconds !== expected.seconds || !this.fractionalSeconds.equals(expected.fractionalSeconds)) return false;
           case Precision.HOUR_AND_MINUTE:
               if(this.minute !== expected.minute || this.hour !== expected.hour) return false;
           case Precision.DAY:
@@ -453,7 +447,8 @@ export class Timestamp {
     public getDate() : Date {
         let offsetShift = this.offset*60000, seconds = null, ms = null;
         if(this.precision === Precision.SECONDS) {
-            let fraction = this.seconds.numberValue();
+            //we need to adjust the fractional seconds here
+            let fraction = this.seconds;
             seconds = Math.floor(fraction);
             ms = fraction - seconds;
         }
@@ -469,7 +464,7 @@ export class Timestamp {
         return date;
     }
 
-  static readonly NULL: Timestamp = new Timestamp(Precision.NULL, null, null, null, null, null, null, null);
+    static readonly NULL: Timestamp = new Timestamp(Precision.NULL, null, null, null, null, null, null, null, null);
 
     static parse(str: string) : Timestamp {
         var precision;
@@ -487,7 +482,8 @@ export class Timestamp {
         let day: number = null;
         let hour: number = null;
         let minute: number = null;
-        let seconds: number | Decimal = null;
+        let seconds: number = null;
+        let fractionalSeconds : Decimal = null;
 
         let pos: number = 0;
         let state: TimeParserState = timeParserStates[States.YEAR];
@@ -526,8 +522,8 @@ export class Timestamp {
                     seconds = v;
                     break;
                 case States.FRACTIONAL_SECONDS:
-                    const START_POSITION_OF_SECONDS = 17;
-                    seconds = Decimal.parse(str.substring(START_POSITION_OF_SECONDS, pos));
+                    const START_POSITION_OF_SECONDS = 19;
+                    fractionalSeconds = Decimal.parse(str.substring(START_POSITION_OF_SECONDS, pos));
                     break;
                 case States.OFFSET:
                     break;
@@ -562,6 +558,6 @@ export class Timestamp {
         }
         if(offset > MAX_OFFSET) throw new Error("Offset " + String(offset) + " above maximum: " + String(MAX_OFFSET));
         if(offset < MIN_OFFSET) throw new Error("Offset " + String(offset) + " below minimum: " + String(MIN_OFFSET));
-        return new Timestamp(precision, offset, year, month, day, hour, minute, seconds);
+        return new Timestamp(precision, offset, year, month, day, hour, minute, seconds, fractionalSeconds);
     }
 }

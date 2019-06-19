@@ -156,15 +156,19 @@ export class ParserBinaryRaw {
     }
 
     private readVarUnsignedInt() : number {
-        let tempInt, byte = this._in.next();
-        let bits = 0;
-        for(tempInt = byte & 0x7F; (byte & 0x80) === 0; byte = this._in.next()) {
-            if(byte === EOF) throw new Error("EOF found in variable length unsigned int.");
-            tempInt = (tempInt << 7) | (byte & 0x7F);
-            bits += 7;
+        let numberOfBits = 0;
+        let byte;
+        let magnitude = 0;
+
+        while (true) {
+            byte = this._in.next();
+            magnitude = (magnitude << 7) | (byte & 0x7F);
+            numberOfBits += 7;
+            if (byte & 0x80) break;
         }
-        if(bits > 32) throw new Error("Values larger than 32 bits need to be marshalled using LongInt")
-        return tempInt;
+
+        if(numberOfBits > 32) throw new Error("Values larger than 32 bits need to be marshalled using LongInt")
+        return magnitude;
     }
 
     private readVarSignedInt() : number {
@@ -201,9 +205,9 @@ export class ParserBinaryRaw {
         return LongInt.fromVarIntBytes(bytes, isNegative);
     }
 
-    private readLongInt() : LongInt {
-        if (this._len - this._in.position() < 1) return new LongInt(0);
-        let bytes : Uint8Array = this._in.view(this._in.position(), );
+    private readLongInt(bytesLeft : number) : LongInt {
+        if (bytesLeft === 0) return new LongInt(0);
+        let bytes : Uint8Array = this._in.view(bytesLeft);
         let sign = (bytes[0] & 0x10) != 0;
         bytes[0] &= 0x7F;
         return LongInt.fromIntBytes(Array.prototype.slice.call(bytes), sign);
@@ -234,21 +238,20 @@ export class ParserBinaryRaw {
     }
 
     private read_decimal_value() : Decimal {
-        var pos, digits, exp, d;
+        var digits, exp;
 
         // so it's a normal value
-        pos = this._in.position();//what is this...
+        let end = this._in.position() + this._len;
         exp = this.readVarSignedInt();
-        digits = this.readLongInt();
-        d = new Decimal(digits, exp);
-
-        return d;
+        digits = this.readLongInt(end - this._in.position());
+        return new Decimal(digits, exp);
     }
 
     private read_timestamp_value() : Timestamp {
         let offset = null;
         let timeArray = [null, null, null, null, null, null];
         let precision = 0;
+        let decimal = null;
         if (this._len < 1) {
             precision = Precision.NULL
         } else {
@@ -256,18 +259,25 @@ export class ParserBinaryRaw {
             offset = this.readVarSignedInt();
             while(this._in.position() < end) {
                 if(precision  === Precision.SECONDS) {
-                    let second = this.readVarUnsignedInt();
-                    let exp = this.readVarSignedInt();
-                    let coef = this.readLongInt();
-                    let decimal = new Decimal(coef, exp);
-                    //timeArray[precision] = decimal.add();
+                    timeArray[precision] = this.readVarUnsignedInt();
+                    //if theres no bytes left to read the fractional second doesn't exist. if we
+                    if (this._in.position() < end) {
+                        let exp = this.readVarSignedInt();
+                        if(this._in.position() < end){
+                            let coef = this.readLongInt(end - this._in.position());
+                            if(this._in.position() < end) throw new Error("illegal timestamp state.");
+                            decimal = new Decimal(coef, exp);
+                        } else {
+                            decimal = new Decimal(new LongInt(0), exp);
+                        }
+                    }
                 } else {
                     timeArray[precision] = this.readVarUnsignedInt();
                     precision++;
                 }
             }
         }
-        return new Timestamp(precision, offset, timeArray[0], timeArray[1], timeArray[2], timeArray[3], timeArray[4], timeArray[5]);
+        return new Timestamp(precision, offset, timeArray[0], timeArray[1], timeArray[2], timeArray[3], timeArray[4], timeArray[5], decimal);
     }
 
     private read_string_value() : string {

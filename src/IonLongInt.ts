@@ -13,7 +13,7 @@
  */
 
 import * as bigInt from "./BigInteger.js";
-import { BigInteger } from "./BigInteger"
+import { BigInteger } from "./BigInteger";
 export class LongInt {
     private int : BigInteger;
 
@@ -102,6 +102,14 @@ export class LongInt {
     public divide(num: number | LongInt) : LongInt {
         if(num instanceof LongInt) return new LongInt(this.int.divide(num.int));
         return new LongInt(this.int.divide(num));
+    }
+
+    lessThan(input : LongInt) : boolean {
+        return this.int.lt(input.int);
+    }
+
+    pow(input : number) : LongInt {
+        return new LongInt(this.int.pow(input));
     }
 
     numberValue() : number {

@@ -266,26 +266,13 @@ export class BinaryWriter implements Writer {
       writer.writeVariableLengthUnsignedInt(value.date.getUTCHours());
       writer.writeVariableLengthUnsignedInt(value.date.getUTCMinutes());
     }
-    if (value.getPrecision() >= Precision.SECONDS) {
-      let seconds: Decimal = value.seconds;
-      let exponent: number = seconds.getExponent();
-
-      if (exponent < 0) { // Fractional number of seconds {
-        let decimalString: string = seconds.getDigits().toString();
-        let numberOfCharacteristicDigits: number = decimalString.length + exponent;
-
-        // Characteristic is the value to the left of the decimal
-        let characteristic = new LongInt(decimalString.slice(0, numberOfCharacteristicDigits)).numberValue();
-        writer.writeVariableLengthUnsignedInt(characteristic);
-
-        // Exponent
-        writer.writeVariableLengthSignedInt(exponent);
-
-        writer.writeSignedInt(parseInt(decimalString.slice(numberOfCharacteristicDigits)));
-      } else { // Whole number of seconds
-        writer.writeVariableLengthUnsignedInt(seconds.numberValue());
+      if (value.getPrecision() >= Precision.SECONDS) {
+          writer.writeVariableLengthUnsignedInt(value.seconds);
+          if (value.fractionalSeconds) {
+              writer.writeVariableLengthSignedInt(value.fractionalSeconds.getExponent());
+              writer.writeBytes(value.fractionalSeconds.getDigits().intBytes());
+          }
       }
-    }
     this.addNode(new BytesNode(this.writer, this.getCurrentContainer(), TypeCodes.TIMESTAMP, this.encodeAnnotations(annotations), writer.getBytes()));
   }
 

@@ -100,6 +100,13 @@ export class Decimal {
         return this._exponent;
     }
 
+    isPositiveFraction() : boolean {
+        if(this.isNegative()) return false;
+        if(this._exponent >= 0) return false;
+        return this._value.lessThan(new LongInt(10).pow(Math.abs(this._exponent)));
+    }
+
+
     equals(expected : Decimal) : boolean {
         return this.getExponent() === expected.getExponent() && this.isNegative() === expected.isNegative() && this.getDigits().numberValue() === expected.getDigits().numberValue();
     }
