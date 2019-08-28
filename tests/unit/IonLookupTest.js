@@ -46,6 +46,7 @@ define(
           // If the path's length is 0, the current reader node is the value which should be returned.
     
           if (reader._type === ion.IonTypes.LIST) {
+            console.log("collecting list");
             var list = [];
             reader.stepIn(); // Step into the list.
     
@@ -58,7 +59,6 @@ define(
           } else if (reader._type === ion.IonTypes.STRUCT) {
             var structToReturn = {};
     
-            var type;
             const currentDepth = reader.depth();
             reader.stepIn();
             while (reader.depth() > currentDepth) {
@@ -73,7 +73,7 @@ define(
             return structToReturn;
           } else if (reader._type === ion.IonTypes.DECIMAL) {
             // Decimal needs to be special-cased because IonJS returns an IonDecimal, which needs to be converted to a JavaScript BigDecimal (3rd party library).
-            return new BigDecimal(reader.value().numberValue());
+            return new BigDecimal(reader.value().stringValue());
           } else if (reader._type === ion.IonTypes.INT) {
             // Integer is special-cased in order to avoid confusion for developers. These Ion utilities do not allow the use of JavaScript numbers. Instead, they
             // use BigInteger and BigDecimal in order to be type-safe.
@@ -88,7 +88,7 @@ define(
           }
         } else if (path.length === 1) {
           // If the path's length is 1, the single value in the path list is the field should to be returned.
-          while (reader.next() !== undefined) {
+          while (reader.next() !== null) {
             if (reader.fieldName() === path[0]) {
               path.shift(); // Remove the path node which we just entered.
               return recursivePathLookup(reader, path);
@@ -96,7 +96,7 @@ define(
           }
         } else {
           // If the path's length >= 2, the Ion tree needs to be traversed more to find the value we're looking for.
-          while (reader.next() !== undefined) {
+          while (reader.next() !== null) {
             if (reader.fieldName() === path[0]) {
               reader.stepIn(); // Step into the IonStruct.
               path.shift(); // Remove the path node which we just entered.
@@ -135,13 +135,19 @@ define(
         assert.deepEqual(value, [ 'value' ]);
       };
 
-      suite['Lookup a list of lists'] = function() {
+      suite['Display a list of lists'] = function() {
         var data = '{ key1: { key2: [[ "value" ]] }}';
         var reader = ion.makeReader(data);
         reader.next();
         reader.stepIn();
         const value = recursivePathLookup(reader, ['key1', 'key2']);
         assert.deepEqual(value, [[ 'value' ]]);
+      };
+
+      suite['Lookup a list of lists'] = function() {
+        var data = '{ key1: { key2: [[ "value" ]] }}';
+        var reader = ion.makeReader(data);
+        assert.equal(readerToString(reader), '{key1:{key2:[["value"]]}}');
       };
 
       registerSuite(suite);
