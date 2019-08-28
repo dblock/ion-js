@@ -37,8 +37,9 @@ define(
         return t;
       }
 
-      function readerToString(reader) {
-        return bytesToString(readerToBytes(reader));
+      function getValueAt(reader, path) {
+        reader.next();
+        return recursivePathLookup(reader, path);
       }
 
       function recursivePathLookup(reader, path) {
@@ -46,7 +47,6 @@ define(
           // If the path's length is 0, the current reader node is the value which should be returned.
     
           if (reader._type === ion.IonTypes.LIST) {
-            console.log("collecting list");
             var list = [];
             reader.stepIn(); // Step into the list.
     
@@ -86,21 +86,19 @@ define(
           } else {
             return reader.value();
           }
-        } else if (path.length === 1) {
-          // If the path's length is 1, the single value in the path list is the field should to be returned.
-          while (reader.next() !== null) {
-            if (reader.fieldName() === path[0]) {
-              path.shift(); // Remove the path node which we just entered.
-              return recursivePathLookup(reader, path);
-            }
-          }
         } else {
-          // If the path's length >= 2, the Ion tree needs to be traversed more to find the value we're looking for.
-          while (reader.next() !== null) {
-            if (reader.fieldName() === path[0]) {
-              reader.stepIn(); // Step into the IonStruct.
-              path.shift(); // Remove the path node which we just entered.
-              return recursivePathLookup(reader, path);
+          if (reader._type === ion.IonTypes.STRUCT) {
+            reader.stepIn();
+            var result = recursivePathLookup(reader, path);
+            reader.stepOut();
+            return result;
+          } else {
+            // If the path's length is 1, the single value in the path list is the field should to be returned.
+            while (reader.next() !== null) {
+              if (reader.fieldName() === path[0]) {
+                path.shift(); // Remove the path node which we just entered.
+                return recursivePathLookup(reader, path);
+              }
             }
           }
         }
@@ -108,46 +106,46 @@ define(
         return undefined;
       }
 
+      suite['Lookup at root'] = function() {
+        var data = '{ key: "value" }';
+        var reader = ion.makeReader(data);
+        const value = getValueAt(reader, []);
+        assert.deepEqual(value, { key: 'value' });
+      };
+
       suite['Lookup a value'] = function() {
         var data = '{ key: "value" }';
         var reader = ion.makeReader(data);
-        reader.next();
-        reader.stepIn();
-        const value = recursivePathLookup(reader, ['key']);
+        const value = getValueAt(reader, ['key']);
         assert.equal(value, 'value');
       };
 
       suite['Lookup a deep path'] = function() {
         var data = '{layer1:{layer2:{layer3:{layer4:{}}}}}';
         var reader = ion.makeReader(data);
-        reader.next();
-        reader.stepIn();
-        const value = recursivePathLookup(reader, ['layer1', 'layer2', 'layer3']);
+        const value = getValueAt(reader, ['layer1', 'layer2', 'layer3']);
         assert.deepEqual(value, { layer4: {} });
       };
 
       suite['Lookup a list'] = function() {
         var data = '{ key1: { key2: [ "value" ] }}';
         var reader = ion.makeReader(data);
-        reader.next();
-        reader.stepIn();
-        const value = recursivePathLookup(reader, ['key1', 'key2']);
+        const value = getValueAt(reader, ['key1', 'key2']);
         assert.deepEqual(value, [ 'value' ]);
       };
 
-      suite['Display a list of lists'] = function() {
-        var data = '{ key1: { key2: [[ "value" ]] }}';
+      suite['Lookup a list of lists'] = function() {
+        var data = '{ key1: { key2: [[ "value" ]] }, key3: { key4: [[ "value" ]] }}}';
         var reader = ion.makeReader(data);
-        reader.next();
-        reader.stepIn();
-        const value = recursivePathLookup(reader, ['key1', 'key2']);
+        const value = getValueAt(reader, ['key1', 'key2']);
         assert.deepEqual(value, [[ 'value' ]]);
       };
 
-      suite['Lookup a list of lists'] = function() {
-        var data = '{ key1: { key2: [[ "value" ]] }}';
+      suite['Lookup a list of lists in another key'] = function() {
+        var data = '{ key1: { key2: [[ "value" ]] }, key3: { key4: [[ "value" ]] }}';
         var reader = ion.makeReader(data);
-        assert.equal(readerToString(reader), '{key1:{key2:[["value"]]}}');
+        const value = getValueAt(reader, ['key3', 'key4']);
+        assert.deepEqual(value, [[ 'value' ]]);
       };
 
       registerSuite(suite);
