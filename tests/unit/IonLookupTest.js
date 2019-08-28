@@ -80,7 +80,7 @@ define(
             return new BigInteger(reader.value());
           } else if (reader._type === ion.IonTypes.TIMESTAMP) {
             // Timestamp needs to be special-cased because IonJS returns an IonTimestamp.
-            return new Date(reader.value().stringValue());
+            return Date.parse(reader.value().stringValue());
           } else if (reader._type === ion.IonTypes.NULL) {
             return null;
           } else {
@@ -134,6 +134,20 @@ define(
         assert.deepEqual(value, [ 'value' ]);
       };
 
+      suite['Lookup an empty struct'] = function() {
+        var data = '{ key1: { key2: {} }}';
+        var reader = ion.makeReader(data);
+        const value = getValueAt(reader, ['key1', 'key2']);
+        assert.deepEqual(value, {});
+      };
+
+      suite['Lookup a timestamp'] = function() {
+        var data = '{ key1: { key2: 2018-01-01T00:00:00.000Z }}';
+        var reader = ion.makeReader(data);
+        const value = getValueAt(reader, ['key1', 'key2']);
+        assert.equal(value, Date.parse("2018-01-01T00:00:00.000Z"));
+      };
+  
       suite['Lookup a list of lists'] = function() {
         var data = '{ key1: { key2: [[ "value" ]] }, key3: { key4: [[ "value" ]] }}}';
         var reader = ion.makeReader(data);
